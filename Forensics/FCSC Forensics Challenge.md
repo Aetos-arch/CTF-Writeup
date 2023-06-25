@@ -174,7 +174,7 @@ windows.dlllist --pid=5540 >
 investigation/dlllist_pid_5540.txt
 ```
 
-![dlllist](Pictures/dlllist.png)
+![dlllist](/Pictures/dlllist.png)
 
 By examining these DLLs, we can identify the specific encryption functions that have been used:
 - bcrypt.dll
@@ -245,7 +245,7 @@ By examining the MFT table, I obtained a complete list of the files present on t
 
 Using the `grep` command, I filtered the results according to the extension identified earlier (webp). This identified the file "th.webp" and provided access to important metadata such as its date and time. This information provides additional clues about the encrypted file and its use by the malicious process.
 
-![MFT](Pictures/MFT.png)
+![MFT](/Pictures/MFT.png)
 
 You can see the different copies of the file.
 To obtain readable character sequences and target a potential flag file, I used the `strings` command, which extracts the strings present in the file. Then I filtered the results using the `grep` command to search for the presence of the keyword "flag".
@@ -382,8 +382,8 @@ Record Number: 106393
 
 At this stage, I've managed to recover the file containing the flag as well as the log file MsCmdRun14.log. All that remained was to decode and decrypt the flag in CyberChef using XOR encoding and encryption functions.
 
-![CyberChef-1](Pictures/CyberChef-1.png)
+![CyberChef-1](/Pictures/CyberChef-1.png)
 
 And here's the flag!
 
-![CyberChef-2](Pictures/CyberChef-2.png)
+![CyberChef-2](/Pictures/CyberChef-2.png)
