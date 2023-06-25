@@ -161,7 +161,7 @@ To find out where the malicious "svchost.exe" process started from, I run the `w
 ```bash
 python3 vol.py -f fcsc.dmp windows.cmdline --pid=5540 > investigation/cmdline_pid_5540.txt
 ```
-```c
+```
 Volatility 3 Framework 2.4.2
 PID Process Args
 5540 svchost.exe C:\Windows\Temp\svchost.exe
