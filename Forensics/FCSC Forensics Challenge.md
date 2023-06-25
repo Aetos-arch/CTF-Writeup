@@ -44,16 +44,16 @@ PE TimeDateStamp      Mon Nov 24 23:45:00 2070
 The result of the `volatility3 -f <path_to_dump_file> windows.inf` command shows information related to the Windows operating system profile extracted from the memory dump file. Here is some key information provided in the result:
 
 - `Kernel Base`: The base address of the Windows operating system kernel.
-- DTB`: The address of the memory descriptor table.
-- Symbols`: The path to the JSON file containing kernel symbols.
+- `DTB`: The address of the memory descriptor table.
+- `Symbols`: The path to the JSON file containing kernel symbols.
 - `Is64Bit`: Indicates whether the operating system is 64-bit.
 - `IsPAE`: Indicates whether Physical Address Extension (PAE) is enabled.
-- Major/Minor`: The major and minor version of the Windows operating system.
-- MachineType`: The machine type (architecture) of the operating system.
-- SystemTime: Windows operating system time and date.
-- NtSystemRoot`: The path to the Windows system directory.
-- NtProductType`: The Windows product type (e.g. NtProductWinNt).
-- NtMajorVersion / NtMinorVersion`: The major and minor version of the Windows kernel.
+- `Major/Minor`: The major and minor version of the Windows operating system.
+- `MachineType`: The machine type (architecture) of the operating system.
+- `SystemTime`: Windows operating system time and date.
+- `NtSystemRoot`: The path to the Windows system directory.
+- `NtProductType`: The Windows product type (e.g. NtProductWinNt).
+- `NtMajorVersion / NtMinorVersion`: The major and minor version of the Windows kernel.
 - `PE MajorOperatingSystemVersion / PE MinorOperatingSystemVersion`: The major and minor version of the operating system in the PE (Portable Executable) file information.
 - `PE Machine`: The type of machine (architecture) in the PE file information.
 - `PE TimeDateStamp`: The time stamp of the PE file.
@@ -132,7 +132,7 @@ b8 60 00 80 a0 93 01 00  .`......
 0x193a0800034: cmp rcx, 0xf70
 0x193a080003b: jbe 0x193a0800046
 ```
-To find the parent and child processes of PID 6424 (VBoxTray.exe), I use the following command:
+To find the parent and child processes of PID 6424 (VBoxTray.exe), I used the following command:
 ```bash
 python3 vol.py -f fcsc.dmp
 windows.pstree.PsTree --pid=5540 >
@@ -157,9 +157,11 @@ False 2023-04-17 17:21:18.000000 N/A
 ```
 
 To find out where the malicious "svchost.exe" process started from, I run the `windows.cmdline` module:
+
 ```bash
 python3 vol.py -f fcsc.dmp windows.cmdline --pid=5540 > investigation/cmdline_pid_5540.txt
-``````bash
+```
+```c
 Volatility 3 Framework 2.4.2
 PID Process Args
 5540 svchost.exe C:\Windows\Temp\svchost.exe
@@ -252,10 +254,10 @@ To obtain readable character sequences and target a potential flag file, I used 
 ```bash
 strings fcsc.dmp >
 investigation/strings.txt
-grep "flag" strings.tx
-...
+```
+```
+grep "flag" strings.txt
 flag.fcsc.enc
-...
 ```
 
 From the MFT table, I've used the `grep -A 15` command to search for information related to the "flag.fcsc.enc" file we identified earlier.
