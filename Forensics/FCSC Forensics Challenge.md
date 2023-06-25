@@ -1,4 +1,4 @@
-## Instructions
+# Instructions
 
 You've discovered that your computer has been infected by a ransomware group that has encrypted a photo that's very important to you. This photo, which was stored on your desktop, is now inaccessible. You decide to conduct a digital investigation to recover the file and identify those responsible for the infection.
 
@@ -14,10 +14,9 @@ Implement the necessary steps to recover this crucial information as part of you
 # Identify which profile you're investigating
 
 Using the command `volatility3 -f <path_to_dump_file> windows.info`, I extracted Windows operating system profile information from the memory dump file. Here's some key information provided in the result:
-```bash 
-➜ volatily3 ➜ volatility3 python3 vol.py -f fcsc.dmp windows.info > investigation/windows.info.txt
+```c 
+python3 vol.py -f fcsc.dmp windows.info > investigation/windows.info.txt
 
-➜ investigation cat windows.info.txt
 Volatility 3 Framework 2.4.2
 Variable              Value
 Kernel Base           0xf8054b615000
@@ -59,15 +58,14 @@ The result of the `volatility3 -f <path_to_dump_file> windows.inf` command shows
 - `PE Machine`: The type of machine (architecture) in the PE file information.
 - `PE TimeDateStamp`: The time stamp of the PE file.
 
-## Find the malicious process, its PID and infection vectors
+# Find the malicious process, its PID and infection vectors
 
 To identify the malicious process responsible for encrypting the file, as well as the associated infection vectors, I use the "windows.malfind" module:
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp windows.malfind > investigation/malfind.txt
+python3 vol.py -f fcsc.dmp windows.malfind > investigation/malfind.txt
 ```
 The result of this command indicates the presence of three potentially malicious processes. Examining the information provided, I conclude that the process responsible for encryption uses XOR encryption instructions and corresponds to the `VBoxTray.exe` process with process ID (PID) 6424.
-```bash
-➜ investigation cat malfind.txt
+```c
 Volatility 3 Framework 2.4.2
 PID   Process           Start              VPN                  End                VPN          Tag   Protection  CommitCharge
 PrivateMemory  File  output Hexdump  Disasm
@@ -136,14 +134,13 @@ b8 60 00 80 a0 93 01 00  .`......
 ```
 To find the parent and child processes of PID 6424 (VBoxTray.exe), I use the following command:
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp
+python3 vol.py -f fcsc.dmp
 windows.pstree.PsTree --pid=5540 >
 investigation/pstree_pid_5540.txt
 ```
 
 The malicious process is found: "svchost.exe".
 ```
-➜ investigation cat pstree_pid_5540.txt
 Volatility 3 Framework 2.4.2
 PID PPID ImageFileName Offset(V) Threads Handles SessionId
 Wow64 CreateTime ExitTime
@@ -161,9 +158,8 @@ False 2023-04-17 17:21:18.000000 N/A
 
 To find out where the malicious "svchost.exe" process started from, I run the `windows.cmdline` module:
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp windows.cmdline --pid=5540 > investigation/cmdline_pid_5540.txt
+python3 vol.py -f fcsc.dmp windows.cmdline --pid=5540 > investigation/cmdline_pid_5540.txt
 ``````bash
-➜ investigation cat cmdline_pid_5540.txt
 Volatility 3 Framework 2.4.2
 PID Process Args
 5540 svchost.exe C:\Windows\Temp\svchost.exe
@@ -173,12 +169,12 @@ The latter tells us that the malicious process "svchost.exe" was executed from t
 
 Finally, to find out which DLL the process used, I use the `windows.dlllist` module:
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp
+python3 vol.py -f fcsc.dmp
 windows.dlllist --pid=5540 >
 investigation/dlllist_pid_5540.txt
 ```
 
-![[dlllist.png]]
+![dlllist](Pictures/dlllist.png)
 
 By examining these DLLs, we can identify the specific encryption functions that have been used:
 - bcrypt.dll
@@ -194,16 +190,15 @@ In conclusion, my investigation revealed the presence of the malicious process `
     - PID: 5540
     - Parent PID: 6424
 
-## Find the encrypted file
+# Find the encrypted file
 
 In order to find the encrypted file and recover it in clear text, we'll perform the following steps:
 
 First, a file analysis using the Volatility tool on the memory dump :
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp windows.filescan > investigation/filescan.txt
+python3 vol.py -f fcsc.dmp windows.filescan > investigation/filescan.txt
 ```
-```bash
-➜ investigation cat filescan.txt | grep "Desktop"
+```c
 0x818684ee8160 \Windows\System32\NPSMDesktopProvider.dll 216
 0x818686c595a0 \Windows\System32\DispBroker.Desktop.dll 216
 0x81868790a9d0 \Windows\System32\DesktopShellExt.dll 216
@@ -236,12 +231,12 @@ I found:
 
 This path corresponds to the location of the file on the desktop. It's a file named "th (9).webp". I checked what the handles contain (to track resources opened by the process, including files):
 ```bash
-➜ volatility3 python3 vol.py -f fcsc.dmp
+python3 vol.py -f fcsc.dmp
 windows.handles --pid=5540 >
 investigation/handles_pid_5540.txt
 ```
 ```bash
-➜ investigation cat handles_pid_5540.txt | grep "Admin | "grep "Desktop"
+cat handles_pid_5540.txt | grep "Admin | "grep "Desktop"
 5540 svchost.exe 0x818689b8f590 0x218 File 0x100001
 \Device\HarddiskVolume2\Users\Admin\Desktop
 ```
@@ -250,14 +245,14 @@ By examining the MFT table, I obtained a complete list of the files present on t
 
 Using the `grep` command, I filtered the results according to the extension identified earlier (webp). This identified the file "th.webp" and provided access to important metadata such as its date and time. This information provides additional clues about the encrypted file and its use by the malicious process.
 
-![[MFT.png]]
+![MFT](Pictures/MFT.png)
 
 You can see the different copies of the file.
 To obtain readable character sequences and target a potential flag file, I used the `strings` command, which extracts the strings present in the file. Then I filtered the results using the `grep` command to search for the presence of the keyword "flag".
 ```bash
 strings fcsc.dmp >
 investigation/strings.txt
-➜ investigation grep "flag" strings.tx
+grep "flag" strings.tx
 ...
 flag.fcsc.enc
 ...
@@ -268,8 +263,8 @@ From the MFT table, I've used the `grep -A 15` command to search for information
 The result of the command shows several important details about this file. We can see that the file "flag.fcsc.enc" is located in the "Users\Admin\Desktop" directory. It is associated with the "$DATA" attribute and is followed by a sequence of hexadecimal data representing its contents.
 
 Further analysis of the results reveals that the MFT entry corresponding to this file was found at offset 0x1327800. 
-```bash
-➜ investigation cat mftparser_vol2.txt | grep -i -A 15 "flag.fcsc"
+```c
+cat mftparser_vol2.txt | grep -i -A 15 "flag.fcsc"
 2023-04-17 17:23:45 UTC+0000 2023-04-17 17:23:50 UTC+0000 2023-04-17
 17:23:50 UTC+0000 2023-04-17 17:23:50 UTC+0000
 Users\Admin\Desktop\flag.fcsc.enc
@@ -293,8 +288,8 @@ Link count: 1
 After searching the MFT table with the command `grep -i "mscmdrun"`, I found several entries corresponding to MsCmdRun log files. Among these entries, the one we're interested in is the file "WindowsTempMsCmdRun14.log".
 
 This entry was created at the same date and time as the "flag.fcsc.enc" file we identified earlier. It is therefore highly likely that there is a correlation between these two files.
-```bash
-➜ investigation cat mftparser_vol2.txt | grep -i "mscmdrun"
+```c
+cat mftparser_vol2.txt | grep -i "mscmdrun"
 2023-04-17 17:22:03 UTC+0000 2023-04-17 17:22:03 UTC+0000 2023-04-17
 17:22:03 UTC+0000 2023-04-17 17:22:03 UTC+0000
 Windows\Temp\MsCmdRun3.log
@@ -359,8 +354,8 @@ Windows\Temp\MsCmdRun16.log
 17:23:24 UTC+0000 2023-04-17 17:23:24 UTC+0000
 Windows\Temp\MsCmdRun10.log
 ```
-```bash
-➜ investigation cat mftparser_vol2.txt | grep -i -A 15 "MsCmdRun14.log"
+```c
+cat mftparser_vol2.txt | grep -i -A 15 "MsCmdRun14.log"
 2023-04-17 17:23:50 UTC+0000 2023-04-17 17:23:50 UTC+0000 2023-04-17
 17:23:50 UTC+0000 2023-04-17 17:23:50 UTC+0000
 Windows\Temp\MsCmdRun14.log
@@ -387,8 +382,8 @@ Record Number: 106393
 
 At this stage, I've managed to recover the file containing the flag as well as the log file MsCmdRun14.log. All that remained was to decode and decrypt the flag in CyberChef using XOR encoding and encryption functions.
 
-![[CyberChef-1.png]]
+![CyberChef-1](Pictures/CyberChef-1.png)
 
 And here's the flag!
 
-![[CyberChef-2.png]]
+![CyberChef-2](Pictures/CyberChef-2.png)
